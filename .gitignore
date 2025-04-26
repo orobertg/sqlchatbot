@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.env
+.venv/
+venv/
+pipenv/
+
+# Environment variables
+.env
+
+# Streamlit
+.streamlit/
+
+# Database Files
+data/audit/chat_audit.db
+
+# VS Code
+.vscode/
+
+# Docker
+*.log
