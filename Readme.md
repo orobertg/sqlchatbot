@@ -69,8 +69,8 @@ streamlit run app/streamlit_app.py
 # Use CTL+C to interrupt the streamlit app server and exit
 
 # Docker 
-# Build the image
-docker build -t sqlchatbot .
+docker-compose up --build
 
-# Run and map the port
-docker run -p 8501:8501 sqlchatbot
+# Rebuild Clean if needed
+docker-compose down
+docker-compose up --build

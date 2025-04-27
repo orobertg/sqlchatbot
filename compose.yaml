@@ -1,7 +1,14 @@
+version: '3.8'
+
 services:
-  web:
-    build: .
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "8502:8502"
-  redis:
-    image: "python:3.10-slim"
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    restart: unless-stopped
