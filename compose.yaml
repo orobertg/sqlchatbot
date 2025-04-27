@@ -10,3 +10,9 @@ services:
     volumes:
       - .:/app
     restart: unless-stopped
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    external: true

@@ -40,11 +40,13 @@ Built with:
 │   └── database_config.py
 ├── data/audit/
 │   └── chat_audit.db (auto-created)
+├── .env
+├── .env_template_docker
+├── compose.yml
 ├── Dockerfile
 ├── launch.py
-├── .env
-├── requirements.txt
-└── README.md
+├── README.md
+└── requirements.txt
 
 ## 🚀 Quickstart
 
@@ -71,8 +73,14 @@ streamlit run app/streamlit_app.py
 # Docker 
 # copy .env_template .env if you haven't done so
 cp .env_template .env 
+# create a docker network, docker compose expects this appnet docker network
+# bridge is the default network.
+docker network create --driver bridge appnet
+# if you are running MS SQL Server in a container, add it to the appnet network
+docker network connect appnet sql1
+# build the sqlchatbot app image and run the app from container
 docker-compose up --build
 
-# Rebuild Clean if needed
+# Rebuild Clean if needed, tear-down and build up
 docker-compose down
 docker-compose up --build

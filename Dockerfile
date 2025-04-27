@@ -1,5 +1,5 @@
 # Use slim python image
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -9,10 +9,10 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /app
 
 # Install dependencies
-COPY .env_template .env
+COPY .env_template_docker .env
 COPY requirements.txt .
 
-# Install system dependencies
+# Install system dependencies for docker image
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
@@ -30,8 +30,6 @@ RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-
-
 # Copy application files
 COPY . .
 
@@ -45,6 +43,9 @@ ENV PYTHONPATH=/app
 ENV STREAMLIT_SERVER_HEADLESS=true
 ENV STREAMLIT_SERVER_PORT=8501
 ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
+
+# Ollama
+ENV OLLAMA_HOST=0.0.0.0
 
 # Command to run the app
 CMD ["streamlit", "run", "app/streamlit_app.py"]
