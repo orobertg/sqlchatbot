@@ -5,6 +5,7 @@
 ![License](https://img.shields.io/badge/license-Apache%202.0-yellowgreen)
 ![Docker](https://img.shields.io/badge/docker-supported-blue)
 ![Chatbot](https://img.shields.io/badge/chatbot-LLM%20SQL%20Assistant-purple)
+![](https://github.com/orobertg/sqlchatbot/blob/main/sqlchatbot.gif)
 
 A modular, schema-aware chatbot that connects to your SQL Server database and turns natural language into executable SQL queries.
 
@@ -48,7 +49,7 @@ Built with:
 ├── README.md
 └── requirements.txt
 
-![](https://github.com/orobertg/sqlchatbot/blob/main/sqlchatbot.gif)
+
 
 ## 🚀 Quickstart
 
