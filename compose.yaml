@@ -1,0 +1,7 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8502:8502"
+  redis:
+    image: "python:3.10-slim"

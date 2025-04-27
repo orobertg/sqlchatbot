@@ -67,3 +67,10 @@ cp .env.example .env
 streamlit run app/streamlit_app.py
 
 # Use CTL+C to interrupt the streamlit app server and exit
+
+# Docker 
+# Build the image
+docker build -t sqlchatbot .
+
+# Run and map the port
+docker run -p 8501:8501 sqlchatbot
