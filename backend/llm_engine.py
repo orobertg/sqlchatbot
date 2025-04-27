@@ -26,9 +26,15 @@ class SQLPrompt(BaseModel):
         schema_description = json.dumps(schema_map, indent=2)
         return (
             "You are a helpful SQL assistant. Below is the schema map.\n\n"
-            "Use ONLY these schemas and tables to write SQL.\n"
+            "Use ONLY these schemas, tables and respective table column names to write SQL.\n"
+            "Respond with ONLY the SQL query.\n"
+            "Always include the correct SCHEMA name for tables (e.g., Sales.Orders).\n"
+            "Always verify column exists in the table EXACTLY as shown in the schema map.\n"
+            "Do not hallucinate a column name that does not exist in the schema map.\n"
+            "If a column does not exist in schema map but in your SQL query, respond with: 'Error: Table or column not found.'\n"
+            "Carefully cross-check each table and column against the schema map. Do NOT assume column names. Do NOT guess.\n"
+            "Do not add commentary or explanation.\n\n"
             f"{schema_description}\n\n"
-            "Respond with ONLY the SQL query, no commentary, no schema names.\n\n"
             f"User Question: {self.description}\n\nSQL:"
         )
 

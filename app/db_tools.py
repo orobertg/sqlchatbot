@@ -5,8 +5,7 @@ import pandas as pd
 from config.database_config import load_database_config
 from backend.sql_connector import SQLConnector
 from backend.tools import list_databases, list_schemas
-from backend.audit_logger import log_query_event  # ⬅️ Add this near your imports
-import time 
+from backend.audit_logger import log_query_event
 
 def list_tables_with_columns(database: str = None, schema: str = None, retries: int = 3, delay: int = 2):
     database = database or st.session_state.get("selected_database") or load_database_config().get("database")
@@ -14,7 +13,7 @@ def list_tables_with_columns(database: str = None, schema: str = None, retries: 
 
     query = f"""
         SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME
-        FROM [{database}].INFORMATION_SCHEMA.COLUMNS
+        FROM INFORMATION_SCHEMA.COLUMNS
     """
     if schema and schema != "All Schemas":
         query += f" WHERE TABLE_SCHEMA = '{schema}'"
@@ -22,23 +21,27 @@ def list_tables_with_columns(database: str = None, schema: str = None, retries: 
     attempt = 0
     while attempt < retries:
         try:
-            connector = SQLConnector()
+            connector = SQLConnector(database_override=database)  # ✅ Use database override
             results = connector.execute_query(query)
             connector.close_connection()
+
             output = {}
             for row in results:
                 full_table = f"{row[0]}.{row[1]}"
                 output.setdefault(full_table, []).append(row[2])
             return output
+
         except Exception as e:
             logging.error(f"Error listing tables and columns: {e}")
             attempt += 1
             time.sleep(delay)
+
     raise Exception(f"Failed to list tables/columns after multiple retries.")
 
 def execute_sql_query(query: str):
     try:
-        connector = SQLConnector()
+        database = st.session_state.get("selected_database")
+        connector = SQLConnector(database_override=database)  # ✅ Use database override
         results = connector.execute_query(query)
         connector.close_connection()
         return results
@@ -66,7 +69,7 @@ def main():
 
         if selected_db != previous_db:
             st.session_state.selected_database = selected_db
-            st.session_state.selected_schema = None  # Reset schema if DB changes
+            st.session_state.selected_schema = None
 
         available_schemas = list_schemas(selected_db)
         selected_schema = st.selectbox("Select Schema", available_schemas)
@@ -103,7 +106,6 @@ def main():
 
                 duration_ms = int((time.time() - start_time) * 1000)
 
-                # ✅ Log success
                 log_query_event(
                     user_prompt="Manual Query from db_tools",
                     generated_sql=sql_query,
@@ -127,3 +129,6 @@ def main():
                     execution_time_ms=duration_ms
                 )
                 st.error(f"Error executing query: {e}")
+
+if __name__ == "__main__":
+    main()

@@ -21,12 +21,14 @@ def clean_sql_backticks(sql: str) -> str:
     """
     return re.sub(r"^```sql\s*|```$", "", sql.strip(), flags=re.IGNORECASE)
 
-def process_user_prompt(user_prompt: str, execute_query: bool = False, confirm_destructive: bool = False):
+def process_user_prompt(user_prompt: str, execute_query: bool = False, confirm_destructive: bool = False, selected_database: str = None):
     """
     Processes the user prompt:
       - Generates SQL using the LLM.
       - Returns SQL preview, and raw reasoning by default.
       - Executes SQL if requested and confirmed (if destructive).
+    Parameters:
+      - selected_database: (Optional) Override the database used at execution time.
     Returns:
       result | raw_llm_output | prompt
     """
@@ -48,7 +50,8 @@ def process_user_prompt(user_prompt: str, execute_query: bool = False, confirm_d
     connector = None
     start = time.time()
     try:
-        connector = SQLConnector()
+        # ✅ Patch: honor dynamic database selection
+        connector = SQLConnector(database_override=selected_database)
         result = connector.execute_query(sql_query)
         duration = int((time.time() - start) * 1000)
 
@@ -87,7 +90,7 @@ def process_user_prompt(user_prompt: str, execute_query: bool = False, confirm_d
             connector.close_connection()
 
 if __name__ == "__main__":
-    test_prompt = "Show me the total sales from the orders table for last quarter where the status is complete."
+    test_prompt = "Show me the total sales of completed orders for last quarter."
     sql, output, prompt = process_user_prompt(test_prompt, execute_query=False)
     print("SQL Preview:\n", sql)
     print("Prompt:\n", prompt)

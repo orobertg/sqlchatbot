@@ -1,94 +1,117 @@
 import pyodbc
+import os
 import logging
 from config.database_config import load_database_config
 
+logger = logging.getLogger(__name__)
+
 class SQLConnector:
-    """
-    A connector class for interacting with an MS SQL database.
-    """
-    def __init__(self):
+    def __init__(self, database_override: str = None):
         self.config = load_database_config()
-        connection_mode = (self.config.get("CONNECTION_MODE") or "MANUAL").strip().upper()
-        logging.info(f"[SQLConnector] Connection mode: {connection_mode}")
+        self.connection = None
+        self.database_override = database_override  # ✅ Allow dynamic database override
 
-        logging.info(f"[SQLConnector] DATABASE_CONFIG values:")        
-        for key, value in self.config.items():
-            display_value = "********" if "password" in key.lower() else value
-            logging.info(f"  {key}: {display_value}")    
-
-        if connection_mode == "ODBC_DSN":
-            dsn = self.config.get("DATABASE_DSN", "").strip()
-            if not dsn:
-                raise Exception("DATABASE_DSN not set in configuration for ODBC DSN mode.")
-            connection_string = f"DSN={dsn};UID={self.config.get('user')};PWD={self.config.get('password')};"
-        else:
-            driver = self.config.get('driver') or self.config.get('DATABASE_DRIVER')
-            if not driver:
-                raise Exception("DATABASE_DRIVER not set in configuration.")
-            driver = driver.strip()
-            if not (driver.startswith("{") and driver.endswith("}")):
-                driver = "{" + driver + "}"
-
-            server = self.config.get('server', '').strip()
-            if server.lower().startswith("tcp:"):
-                server = server.replace("tcp:", "")
-            port = self.config.get('port', '').strip()
-            if port:
-                server = f"{server},{port}"
-
-            connection_string = (
-                f"DRIVER={driver};"
-                f"SERVER={server};"
-                f"DATABASE={self.config.get('database')};"
-                f"UID={self.config.get('user')};"
-                f"PWD={self.config.get('password')};"
-            )
-
-        safe_connection_string = connection_string.replace(
-            f"PWD={self.config.get('password')};", "PWD=********;"
-        )
-        print(f"[SQLConnector] Connecting with: {safe_connection_string}")
-        logging.info(f"[SQLConnector] Connecting with: {safe_connection_string}")
-
+    def connect(self):
+        """
+        Establish a new database connection based on .env settings or override.
+        """
         try:
-            self.conn = pyodbc.connect(connection_string)
-            self.cursor = self.conn.cursor()
-            logging.info("Connected to MS SQL database successfully.")
-        except Exception as e:
-            logging.error(f"Failed to connect to database: {e}")
-            raise
+            mode = self.config.get("connection_mode", "MANUAL").upper()
 
-    def execute_query(self, query: str, params=None):
-        try:
-            logging.info(f"[SQLConnector] Executing query: {query}")
-            if params is None:
-                self.cursor.execute(query)
-            else:
-                self.cursor.execute(query, params)
+            if mode == "ODBC_DSN":
+                dsn = self.config.get("database_dsn", "").strip()
+                uid = self.config.get("user", "").strip()
+                pwd = self.config.get("password", "").strip()
+                conn_str = f"DSN={dsn};UID={uid};PWD={pwd}"
+            else:  # MANUAL connection string
+                driver = self.config.get("driver", "").strip()
+                server = self.config.get("server", "").strip()
+                port = self.config.get("port", "").strip()
+                # ✅ If database_override is given, use it instead of .env database
+                database = self.database_override or self.config.get("database", "").strip()
+                uid = self.config.get("user", "").strip()
+                pwd = self.config.get("password", "").strip()
 
-            if query.strip().lower().startswith("select"):
-                rows = self.cursor.fetchall()
-                logging.info(f"[SQLConnector] Query returned {len(rows)} rows.")
-                return rows
-            else:
-                self.conn.commit()
-                logging.info("[SQLConnector] Non-select query committed.")
-                return []
+                if not server.lower().startswith("tcp:"):
+                    server = f"tcp:{server}"
+
+                server_and_port = f"{server},{port}" if port else server
+
+                conn_str = (
+                    f"DRIVER={driver};"
+                    f"SERVER={server_and_port};"
+                    f"DATABASE={database};"
+                    f"UID={uid};"
+                    f"PWD={pwd};"
+                )
+
+            logger.info(f"[SQLConnector] Connecting with: {conn_str.replace(pwd, '********')}")
+            self.connection = pyodbc.connect(conn_str)
+            logger.info(f"[SQLConnector] Successfully connected to database: {self.database_override or self.config.get('database')}")
+
         except Exception as e:
-            self.conn.rollback()
-            logging.error(f"Error executing query: {e}")
+            logger.error(f"[SQLConnector] Failed to connect to database: {e}")
             raise
 
     def close_connection(self):
-        self.conn.close()
-        logging.info("[SQLConnector] Connection closed.")
+        """
+        Safely close the database connection.
+        """
+        if self.connection:
+            self.connection.close()
+            self.connection = None
+            logger.info("[SQLConnector] Database connection closed.")
+
+    def execute_query(self, sql_query: str, database_override: str = None):
+        """
+        Execute a SQL query and return results.
+        If database_override is provided at query-time, force reconnect.
+        """
+        # ✅ Handle dynamic override at query-time too
+        if database_override and (database_override != self.database_override):
+            self.database_override = database_override
+            self.connection = None  # Force re-connect
+
+        if not self.connection:
+            self.connect()
+
+        try:
+            cursor = self.connection.cursor()
+            logger.info(f"[SQLConnector] Executing query:\n{sql_query}")
+
+            cursor.execute(sql_query)
+
+            if cursor.description:
+                columns = [column[0] for column in cursor.description]
+                rows = cursor.fetchall()
+                results = [dict(zip(columns, row)) for row in rows]
+                logger.info(f"[SQLConnector] Query returned {len(results)} rows.")
+                return results
+            else:
+                logger.info("[SQLConnector] Query executed successfully (no result set).")
+                return []
+
+        except Exception as e:
+            logger.error(f"[SQLConnector] Query execution failed: {e}")
+            raise
 
 def validate_db_connection() -> bool:
+    """
+    Validate if a database connection can be established.
+    Always uses the default database in .env configuration.
+    """
     try:
+        config = load_database_config()
+        default_db = config.get("database", "unknown")
+
         connector = SQLConnector()
         test_result = connector.execute_query("SELECT 1 AS test")
         connector.close_connection()
+
+        logger.info(f"[SQLConnector] Database connection validation succeeded (Database: {default_db})")
         return True
+
     except Exception as e:
-        print(f"Database connection test error: {e}")
+        logger.error(f"[SQLConnector] Database connection validation FAILED (Database: {default_db}): {e}")
         return False
+

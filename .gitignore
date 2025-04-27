@@ -25,3 +25,6 @@ data/audit/chat_audit.db
 
 # Docker
 *.log
+
+# Readme gif
+.gif

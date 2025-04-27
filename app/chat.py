@@ -4,7 +4,7 @@ import pandas as pd
 import json
 from dotenv import load_dotenv
 from pathlib import Path
-from backend.audit_logger import log_query_event  # ⬅️ Add this near your imports
+from backend.audit_logger import log_query_event
 import time
 
 # Load environment
@@ -94,7 +94,11 @@ def main():
             if not user_prompt.strip():
                 st.warning("Please enter a query description first.")
             else:
-                output, raw_output, full_prompt = process_user_prompt(user_prompt)
+                output, raw_output, full_prompt = process_user_prompt(
+                    user_prompt,
+                    execute_query=False,
+                    selected_database=st.session_state.selected_database  # ✅ Pass selected DB
+                )
                 st.session_state.generated_sql = output
                 st.session_state.full_prompt = full_prompt
                 st.session_state.raw_llm_output = raw_output
@@ -113,13 +117,12 @@ def main():
                 try:
                     start_time = time.time()
 
-                    connector = SQLConnector()
+                    connector = SQLConnector(database_override=st.session_state.selected_database)  # ✅ Force DB override
                     results = connector.execute_query(sql_query)
                     connector.close_connection()
 
                     duration_ms = int((time.time() - start_time) * 1000)
 
-                    # ✅ Log successful query with timing
                     log_query_event(
                         user_prompt=st.session_state.get("chat_user_prompt", ""),
                         generated_sql=sql_query,
@@ -127,7 +130,7 @@ def main():
                         error_message=None,
                         execution_time_ms=duration_ms
                     )
-                
+
                     if results:
                         df = pd.DataFrame(results)
                         st.subheader("📊 Query Results:")
@@ -145,7 +148,7 @@ def main():
                         execution_time_ms=duration_ms
                     )
                     st.error(f"Error executing query: {e}")
-                    
+
     # --- Debugging Expanders ---
     if st.session_state.get("full_prompt"):
         with st.expander("📝 Full Prompt Sent to LLM"):
@@ -158,3 +161,6 @@ def main():
     if st.session_state.get("schema_map_refreshed"):
         with st.expander("📚 Current Schema Map (After Refresh)"):
             st.json(st.session_state.schema_map_refreshed)
+
+if __name__ == "__main__":
+    main()
