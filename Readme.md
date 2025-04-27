@@ -1,5 +1,11 @@
 # 🧠 SQL Chatbot – Natural Language to SQL, Powered by Local LLMs
 
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![Streamlit](https://img.shields.io/badge/streamlit-1.25%2B-brightgreen)
+![License](https://img.shields.io/badge/license-Apache%202.0-yellowgreen)
+![Docker](https://img.shields.io/badge/docker-supported-blue)
+![Chatbot](https://img.shields.io/badge/chatbot-LLM%20SQL%20Assistant-purple)
+
 A modular, schema-aware chatbot that connects to your SQL Server database and turns natural language into executable SQL queries.
 
 Built with:
@@ -44,7 +50,7 @@ Built with:
 
 ```bash
 # Clone repo
-git clone https://github.com/orobertgyourname/sqlchatbot
+git clone https://github.com/orobertg/sqlchatbot
 cd sqlchatbot
 
 # PipEnv (virtual environment)
