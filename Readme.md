@@ -48,7 +48,7 @@ Built with:
 ├── README.md
 └── requirements.txt
 
-![sqlchatbot](https://github.com/orobertg/sqlchatbot/blob/main/sqlchatbot.gif)
+![](https://github.com/orobertg/sqlchatbot/blob/main/sqlchatbot.gif)
 
 ## 🚀 Quickstart
 
