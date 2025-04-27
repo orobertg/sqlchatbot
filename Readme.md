@@ -69,6 +69,8 @@ streamlit run app/streamlit_app.py
 # Use CTL+C to interrupt the streamlit app server and exit
 
 # Docker 
+# copy .env_template .env if you haven't done so
+cp .env_template .env 
 docker-compose up --build
 
 # Rebuild Clean if needed
