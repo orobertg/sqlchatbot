@@ -9,6 +9,7 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /app
 
 # Install dependencies
+COPY .env_template .env
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
