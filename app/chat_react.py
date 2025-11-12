@@ -202,7 +202,8 @@ def initialize_session_state():
         st.session_state.schema_map = {}
     
     if "current_database" not in st.session_state:
-        st.session_state.current_database = None
+        # Seed with configured database from DB_CONFIG
+        st.session_state.current_database = DB_CONFIG.get("database")
         
     if "chat_mode" not in st.session_state:
         st.session_state.chat_mode = "Simple"
@@ -365,6 +366,15 @@ def main():
     try:
         # Get available databases
         databases = get_databases_from_cache()
+        
+        # Normalize current_database: ensure it's in the available databases list
+        if databases:
+            if st.session_state.current_database not in databases:
+                # If seeded database isn't available, use first database
+                st.session_state.current_database = databases[0]
+        else:
+            # No databases available, set to None
+            st.session_state.current_database = None
         
         # Mode selector using toggle
         advanced_mode = st.toggle(
