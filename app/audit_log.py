@@ -31,6 +31,3 @@ def main():
 
         st.dataframe(df, use_container_width=True, height=600)
 
-        with st.expander("📥 Download CSV"):
-            csv = df.to_csv(index=False).encode("utf-8")
-            st.download_button("Download Audit Log as CSV", data=csv, file_name="chat_audit_log.csv", mime="text/csv")
