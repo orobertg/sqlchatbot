@@ -23,12 +23,20 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Microsoft ODBC Driver 17 (optional if using MS SQL Server)
-RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
-    && curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+# Modern approach: use gpg keyring in the location Microsoft repo expects
+RUN mkdir -p /usr/share/keyrings \
+    && curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y msodbcsql17
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql17 \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies, excluding Windows-only packages like pywin32
+# Handle encoding issues: convert UTF-16 to UTF-8 if needed, then filter
+RUN python3 -c "import sys; d=open('requirements.txt','rb').read(); exec('try:\n t=d.decode(\"utf-8\")\nexcept UnicodeDecodeError:\n t=d.decode(\"utf-16-le\")'); lines=[l for l in t.splitlines() if l.strip() and 'pywin32' not in l.lower()]; open('requirements-docker.txt','w',encoding='utf-8').write('\n'.join(lines))"
+RUN pip install --no-cache-dir -r requirements-docker.txt && \
+    rm requirements-docker.txt && \
+    which streamlit || (echo "ERROR: streamlit not installed" && exit 1)
 
 # Copy application files
 COPY . .
