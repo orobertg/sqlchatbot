@@ -208,14 +208,15 @@ def get_bot_response(prompt: str) -> str:
             st.markdown("\n" + response["response"])
         
         # Return the complete response for chat history
+        debug_info = response.get("debug_info", {}) if response else {}
         return "\n".join([
             "🤔 Let me think about this...",
             "\n**Tool Calls and Prompts:**",
-            *[tool_call for tool_call in response["debug_info"]["tool_calls"]],
+            *[tool_call for tool_call in debug_info.get("tool_calls", [])],
             "\n**Initial SQL Query:**",
-            f"```sql\n{response['debug_info']['initial_query']}\n```",
-            f"\n❌ **Validation Error:** {response['debug_info']['validation_error']}" if response["debug_info"].get("validation_error") else "",
-            f"\n**Final SQL Query:**\n```sql\n{response['debug_info']['final_query']}\n```" if response["debug_info"].get("final_query") else "",
+            f"```sql\n{debug_info.get('initial_query', '')}\n```",
+            f"\n❌ **Validation Error:** {debug_info.get('validation_error')}" if debug_info.get("validation_error") else "",
+            f"\n**Final SQL Query:**\n```sql\n{debug_info.get('final_query')}\n```" if debug_info.get("final_query") else "",
             "\n" + response["response"] if response and "response" in response else ""
         ])
         

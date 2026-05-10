@@ -327,11 +327,11 @@ def list_tables(input: ListTablesInput) -> ListTablesOutput:
         connector = SQLConnector()
         if input.schema_name:
             query = """
-                SELECT TABLE_SCHEMA + '.' + TABLE_NAME AS TABLE_NAME 
+                SELECT TABLE_SCHEMA + '.' + TABLE_NAME AS TABLE_NAME
                 FROM INFORMATION_SCHEMA.TABLES
-                WHERE TABLE_SCHEMA = :schema_name
+                WHERE TABLE_SCHEMA = ?
             """
-            columns, results = connector.execute_query(query, params={"schema_name": input.schema_name})
+            columns, results = connector.execute_query(query, params=[input.schema_name])
         else:
             query = """
                 SELECT TABLE_SCHEMA + '.' + TABLE_NAME AS TABLE_NAME 
@@ -384,36 +384,24 @@ def describe_table(table_name: str, schema_name: str = 'dbo', connector: Optiona
         ORDER BY c.column_id
         """
         
-        results = connector.execute_query(query, params=(table_name, schema_name))
-        
+        _, results = connector.execute_query(query, params=[table_name, schema_name])
+
         if should_close:
             connector.close()
-            
+
         if not results:
             logger.warning(f"No results for table {schema_name}.{table_name}")
             return None
-            
+
         columns = []
         for row in results:
-            # Convert row to dict if it's not already
-            if isinstance(row, (list, tuple)):
-                column_data = {
-                    'name': row[0],
-                    'type': row[1],
-                    'is_nullable': bool(row[2]),
-                    'is_primary_key': bool(row[3]),
-                    'is_foreign_key': bool(row[4])
-                }
-            else:
-                # Assuming row is already a dict-like object
-                column_data = {
-                    'name': row.column_name,
-                    'type': row.data_type,
-                    'is_nullable': bool(row.is_nullable),
-                    'is_primary_key': bool(row.is_primary_key),
-                    'is_foreign_key': bool(row.is_foreign_key)
-                }
-            
+            column_data = {
+                'name': row['column_name'],
+                'type': row['data_type'],
+                'is_nullable': bool(row['is_nullable']),
+                'is_primary_key': bool(row['is_primary_key']),
+                'is_foreign_key': bool(row['is_foreign_key'])
+            }
             columns.append(column_data)
             
         if not columns:
@@ -516,7 +504,7 @@ def get_databases() -> List[str]:
         query = "SELECT name FROM sys.databases WHERE database_id > 4;"  # Skip system DBs
         _, results = connector.execute_query(query)
         connector.close()
-        return [row[0] for row in results] if results else []
+        return [row['name'] for row in results] if results else []
     except Exception as e:
         logger.error(f"Error getting databases: {str(e)}")
         return []
@@ -536,7 +524,7 @@ def get_all_schema_names(database_name: str) -> List[str]:
         query = "SELECT name FROM sys.schemas ORDER BY name;"
         _, results = connector.execute_query(query)
         connector.close()
-        return [row[0] for row in results] if results else []
+        return [row['name'] for row in results] if results else []
     except Exception as e:
         logger.error(f"Error getting schema names: {str(e)}")
         return []
@@ -572,16 +560,16 @@ def get_schema_map_formatted(database_name: str = None) -> str:
         formatted_schema.append(f"\n{schema_name} Schema:")
         for table_name, table_info in schema_info['tables'].items():
             formatted_schema.append(f"  {table_name} Table:")
-            for column in table_info['columns']:
+            for column_name, column_info in table_info['columns'].items():
                 formatted_schema.append(
-                    f"    - {column['name']} ({column['type']})"
-                    f"{' [PK]' if column['name'] in table_info['primary_keys'] else ''}"
+                    f"    - {column_name} ({column_info['type']})"
+                    f"{' [PK]' if column_name in table_info['primary_keys'] else ''}"
                 )
-            
+
             # Add FK information
             for fk in table_info['foreign_keys']:
                 formatted_schema.append(
-                    f"    - FK: {fk['column']} -> {fk['referenced_schema']}.{fk['referenced_table']}.{fk['referenced_column']}"
+                    f"    - FK: {fk['column']} -> {fk['references']}"
                 )
     
     return "\n".join(formatted_schema)
@@ -644,7 +632,7 @@ def build_visual_query():
             if selected_table:
                 # Get columns for the selected table
                 columns = schema_map[selected_schema]['tables'][selected_table]['columns']
-                column_names = [col['name'] for col in columns]
+                column_names = list(columns.keys())
                 
                 # Let user select columns
                 selected_columns = st.multiselect("Select Columns", column_names)
@@ -752,7 +740,12 @@ def validate_query(query: str, schema_map: dict) -> dict:
         for match in table_matches:
             table = match.group(1) or match.group(2)  # Get the matched table name
             # Check if table exists in schema_map
-            schema_name, table_name = table.split('.')
+            if '.' not in table:
+                return {
+                    "is_valid": False,
+                    "error": f"Table '{table}' must use a fully qualified name (schema.table)"
+                }
+            schema_name, table_name = table.split('.', 1)
             if schema_name not in schema_map or table_name not in schema_map[schema_name]:
                 return {
                     "is_valid": False,

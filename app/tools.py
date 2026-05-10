@@ -2,9 +2,12 @@ import streamlit as st
 from backend.db_tools import get_schema_map, get_schema_map_formatted, clear_schema_cache
 import json
 import logging
+import logging.handlers
 from pathlib import Path
 from datetime import datetime
 import os
+
+logger = logging.getLogger(__name__)
 
 def setup_log_directory():
     """Setup log directory structure."""
@@ -197,14 +200,14 @@ def show_debug_logs():
             if st.button("🗑️ Clear Selected Log", key="clear_selected"):
                 if clear_log_file(selected_file):
                     st.success(f"Cleared log file: {selected_file.name}")
-                    st.experimental_rerun()
+                    st.rerun()
         
         # Clear all logs
         if st.button("🗑️ Clear All Logs", key="clear_all"):
             if st.checkbox("I confirm I want to delete all logs", key="confirm_clear_all"):
                 if clear_all_logs():
                     st.success("All logs have been cleared")
-                    st.experimental_rerun()
+                    st.rerun()
             else:
                 st.warning("Please confirm before clearing all logs")
 
@@ -215,7 +218,7 @@ def show_schema_viewer():
     # Add a refresh button
     if st.button("Refresh Schema"):
         clear_schema_cache()
-        st.experimental_rerun()
+        st.rerun()
     
     # Get schema map
     schema_map = get_schema_map()

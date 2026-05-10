@@ -102,23 +102,23 @@ def build_connection_string(config: dict) -> str:
         dsn = config.get("DATABASE_DSN", "").strip()
         if not dsn:
             return "DSN not configured."
-        connection_string = (
+        safe_connection_string = (
             f"DSN={dsn};"
             f"UID={config.get('DATABASE_USER', '').strip()};"
-            f"PWD={config.get('DATABASE_PASSWORD', '').strip()};"
+            f"PWD=********;"
         )
     else:
         driver = config.get("DATABASE_DRIVER", "").strip()
         if not (driver.startswith("{") and driver.endswith("}")):
             driver = "{" + driver + "}"
-        
+
         server = config.get("DATABASE_SERVER", "").strip()
         if not server.lower().startswith("tcp:"):
             server = "tcp:" + server
         port = config.get("DATABASE_PORT", "").strip()
         if port:
             server = f"{server},{port}"
-        
+
         connection_string = (
             f"DRIVER={driver};"
             f"SERVER={server};"
@@ -127,7 +127,7 @@ def build_connection_string(config: dict) -> str:
             f"PWD={config.get('DATABASE_PASSWORD', '').strip()};"
         )
         safe_connection_string = connection_string.replace(
-            f"PWD={config.get('DATABASE_PASSWORD')};", 
+            f"PWD={config.get('DATABASE_PASSWORD')};",
             "PWD=********;"
         )
     return safe_connection_string
@@ -187,15 +187,7 @@ def test_model_connection(model_name: str) -> Tuple[bool, str]:
 
 def test_database_connection():
     """Test the database connection"""
-    try:
-        connector = SQLConnector()
-        results, error = connector.execute_query("SELECT @@version")
-        if error:
-            return False, f"Database connection test failed: {error}"
-        connector.close()
-        return True, "Database connection test successful!"
-    except Exception as e:
-        return False, f"Database connection test failed: {str(e)}"
+    return test_db_connection()
 
 def get_raw_model_info():
     """Get raw model information from Ollama API"""
@@ -652,7 +644,7 @@ def show_llm_config():
                         "success": success,
                         "message": message
                     }
-                st.experimental_rerun()
+                st.rerun()
 
 def show_current_llm_config():
     """Display current LLM configuration."""

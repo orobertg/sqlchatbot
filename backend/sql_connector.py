@@ -120,16 +120,6 @@ class SQLConnector:
         except:
             return False
 
-    def cursor(self):
-        """Get a cursor, creating connection if needed"""
-        if not self.is_connected():
-            if not self.connect():
-                raise Exception("No valid SQL database connection found. Please configure your database settings.")
-        
-        if not self.conn:
-            self.conn = pyodbc.connect(DB_CONFIG.get('CONNECTION_STRING'))
-        return self.conn.cursor()
-    
     @property
     def messages(self):
         """Get messages from the cursor"""
@@ -147,12 +137,10 @@ class SQLConnector:
 
 def validate_db_connection(database_override: Optional[str] = None) -> bool:
     try:
-        connector = SQLConnector()
-        conn = connector.connect()
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1 AS test")
-        result = cursor.fetchone()
-        conn.close()
+        connector = SQLConnector(database=database_override)
+        connector.cursor.execute("SELECT 1 AS test")
+        result = connector.cursor.fetchone()
+        connector.close()
         return result is not None
     except Exception as e:
         logging.warning(f"Database connection test failed: {e}")
@@ -248,27 +236,19 @@ def test_db_connection() -> Tuple[bool, str]:
         
         # Validate based on connection mode
         if mode == "Connection String":
-            conn_string = os.getenv("DATABASE_CONNECTION_STRING")
-            if not conn_string:
+            if not os.getenv("DATABASE_CONNECTION_STRING"):
                 return False, "No connection string configured. Please save your connection string settings first."
-                
-            # Test the connection string
-            connector = SQLConnector(connection_string=conn_string)
-            
+
         elif mode == "DSN":
-            dsn = os.getenv("DATABASE_DSN")
-            if not dsn:
+            if not os.getenv("DATABASE_DSN"):
                 return False, "No DSN configured. Please save your DSN settings first."
-                
-            # Test the DSN connection
-            connector = SQLConnector(dsn=dsn)
-            
+
         else:
             return False, "Please configure and save your database connection settings first."
-        
+
         # Test the connection
         try:
-            connector.connect()
+            connector = SQLConnector()
             connector.close()
             return True, "Database connection successful"
         except Exception as e:

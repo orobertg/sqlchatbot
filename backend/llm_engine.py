@@ -626,6 +626,7 @@ def get_schema_map_from_cache(database: str = None) -> Dict:
 
 def _build_schema_map(database: str = None) -> Dict:
     """Build schema map for the given database"""
+    connector = None
     try:
         logger.info(f"Building schema map for database: {database}")
         connector = SQLConnector(database=database)
